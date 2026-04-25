@@ -32,6 +32,9 @@ body {
         linear-gradient(90deg, #e6dfd1 1px, transparent 1px);
     background-size: 100% 100%, 40px 40px, 40px 40px;
     overscroll-behavior: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 #physics-container {
@@ -442,6 +445,9 @@ body {
     transition: all 0.2s;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     align-items: center;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .result-item:hover { 
