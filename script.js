@@ -130,7 +130,10 @@ async function searchYouTube(query) {
         if (data.items && data.items.length > 0) {
             displayResults(data.items);
         } else {
-            alert("No results found for that search.");
+            // Instead of an alert, we can just clear the results or show a small message in the panel
+            const list = document.getElementById('results-list');
+            list.innerHTML = '<div style="padding: 20px; text-align: center; font-family: VT323, monospace; color: var(--text-secondary);">NO TAPES FOUND...</div>';
+            document.getElementById('results-panel').classList.remove('hidden');
         }
     } catch (e) { 
         console.error("Fetch Failed:", e); 
@@ -271,9 +274,28 @@ function initPhysics() {
 }
 
 // --- Listeners ---
+function debounce(func, timeout = 500) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { func.apply(this, args); }, timeout);
+    };
+}
+
+const handleLiveSearch = debounce((query) => {
+    if (query.trim().length >= 3) {
+        searchYouTube(query);
+    }
+});
+
+document.getElementById('search-input').oninput = (e) => handleLiveSearch(e.target.value);
+
 document.getElementById('search-button').onclick = () => searchYouTube(document.getElementById('search-input').value);
 document.getElementById('search-input').onkeypress = (e) => {
-    if (e.key === 'Enter') searchYouTube(e.target.value);
+    if (e.key === 'Enter') {
+        handleLiveSearch.cancel?.(); // Optional: stop debounce if user hits enter
+        searchYouTube(e.target.value);
+    }
 };
 document.getElementById('close-results').onclick = () => document.getElementById('results-panel').classList.add('hidden');
 document.getElementById('btn-play').onclick = () => state.player?.playVideo();
