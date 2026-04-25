@@ -156,14 +156,88 @@ function displayResults(items) {
             </div>
         `;
         div.onclick = () => loadTrack(item);
+        
+        // --- Desktop Drag Support ---
         div.ondragstart = (e) => {
             e.dataTransfer.setData('application/json', JSON.stringify(item));
             e.dataTransfer.effectAllowed = 'move';
-            // Hide the panel slightly after the drag starts to avoid cancelling the drag
             setTimeout(() => {
                 document.getElementById('results-panel').classList.add('hidden');
             }, 10);
         };
+        
+        // --- Touch Drag Support for Mobile ---
+        let touchGhost = null;
+        let startX, startY;
+
+        div.ontouchstart = (e) => {
+            // Don't prevent default here to allow normal tapping/scrolling if they don't move
+            const touch = e.touches[0];
+            startX = touch.clientX;
+            startY = touch.clientY;
+            
+            // Create ghost after a short delay or movement to distinguish from tap/scroll
+        };
+
+        div.ontouchmove = (e) => {
+            const touch = e.touches[0];
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+
+            // If moved enough, start dragging
+            if (!touchGhost && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+                e.preventDefault(); // Prevent scrolling once we start dragging
+                touchGhost = div.cloneNode(true);
+                touchGhost.style.position = 'fixed';
+                touchGhost.style.width = div.offsetWidth + 'px';
+                touchGhost.style.height = div.offsetHeight + 'px';
+                touchGhost.style.left = (touch.clientX - div.offsetWidth / 2) + 'px';
+                touchGhost.style.top = (touch.clientY - div.offsetHeight / 2) + 'px';
+                touchGhost.style.zIndex = '1000';
+                touchGhost.style.pointerEvents = 'none';
+                touchGhost.style.opacity = '0.8';
+                touchGhost.style.transform = 'scale(0.8) rotate(-5deg)';
+                touchGhost.style.boxShadow = '0 10px 20px rgba(0,0,0,0.3)';
+                document.body.appendChild(touchGhost);
+                
+                document.getElementById('results-panel').classList.add('hidden');
+                deck.classList.add('drag-over');
+            }
+
+            if (touchGhost) {
+                e.preventDefault();
+                touchGhost.style.left = (touch.clientX - div.offsetWidth / 2) + 'px';
+                touchGhost.style.top = (touch.clientY - div.offsetHeight / 2) + 'px';
+                
+                // Visual feedback if over deck
+                const deckRect = deck.getBoundingClientRect();
+                if (touch.clientX >= deckRect.left && touch.clientX <= deckRect.right &&
+                    touch.clientY >= deckRect.top && touch.clientY <= deckRect.bottom) {
+                    deck.classList.add('drag-over');
+                } else {
+                    deck.classList.remove('drag-over');
+                }
+            }
+        };
+
+        div.ontouchend = (e) => {
+            if (touchGhost) {
+                const touch = e.changedTouches[0];
+                const deckRect = deck.getBoundingClientRect();
+                
+                if (touch.clientX >= deckRect.left && touch.clientX <= deckRect.right &&
+                    touch.clientY >= deckRect.top && touch.clientY <= deckRect.bottom) {
+                    loadTrack(item);
+                } else {
+                    document.getElementById('results-panel').classList.remove('hidden');
+                }
+                
+                touchGhost.remove();
+                touchGhost = null;
+                deck.classList.remove('drag-over');
+            }
+        };
+
         list.appendChild(div);
     });
     document.getElementById('results-panel').classList.remove('hidden');
