@@ -202,15 +202,21 @@ function displayResults(items) {
                 e.preventDefault();
                 touchGhost = div.cloneNode(true);
                 touchGhost.style.position = 'fixed';
-                touchGhost.style.width = div.offsetWidth + 'px';
-                touchGhost.style.height = div.offsetHeight + 'px';
+                // Limit the size of the ghost on mobile so it doesn't "zoom" too much
+                const ghostWidth = Math.min(div.offsetWidth, 250);
+                const ghostHeight = (ghostWidth / div.offsetWidth) * div.offsetHeight;
+                touchGhost.style.width = ghostWidth + 'px';
+                touchGhost.style.height = ghostHeight + 'px';
                 touchGhost.style.left = '0';
                 touchGhost.style.top = '0';
                 touchGhost.style.zIndex = '1000';
                 touchGhost.style.pointerEvents = 'none';
                 touchGhost.style.opacity = '0.9';
                 touchGhost.style.willChange = 'transform';
-                touchGhost.style.transform = `translate3d(${touch.clientX - div.offsetWidth / 2}px, ${touch.clientY - div.offsetHeight / 2}px, 0) scale(0.8) rotate(-5deg)`;
+                // Center the ghost under the finger
+                const initialX = touch.clientX - ghostWidth / 2;
+                const initialY = touch.clientY - ghostHeight / 2;
+                touchGhost.style.transform = `translate3d(${initialX}px, ${initialY}px, 0) scale(0.9) rotate(-5deg)`;
                 touchGhost.style.boxShadow = '0 15px 30px rgba(0,0,0,0.4)';
                 touchGhost.style.transition = 'transform 0.05s linear, opacity 0.2s';
                 document.body.appendChild(touchGhost);
@@ -221,10 +227,11 @@ function displayResults(items) {
 
             if (touchGhost) {
                 e.preventDefault();
-                // Use translate3d for hardware acceleration
-                const x = touch.clientX - div.offsetWidth / 2;
-                const y = touch.clientY - div.offsetHeight / 2;
-                touchGhost.style.transform = `translate3d(${x}px, ${y}px, 0) scale(0.85) rotate(-3deg)`;
+                const ghostWidth = parseFloat(touchGhost.style.width);
+                const ghostHeight = parseFloat(touchGhost.style.height);
+                const x = touch.clientX - ghostWidth / 2;
+                const y = touch.clientY - ghostHeight / 2;
+                touchGhost.style.transform = `translate3d(${x}px, ${y}px, 0) scale(1) rotate(-3deg)`;
                 
                 const deckRect = deck.getBoundingClientRect();
                 if (touch.clientX >= deckRect.left && touch.clientX <= deckRect.right &&
