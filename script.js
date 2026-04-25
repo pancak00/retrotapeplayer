@@ -98,9 +98,20 @@ class FrequencyVisualizer {
     }
 
     animate() {
-        this.update();
-        this.draw();
-        requestAnimationFrame(() => this.animate());
+        // Only update at 30fps on mobile to save battery/CPU
+        const fps = /Android|iPhone|iPad/i.test(navigator.userAgent) ? 30 : 60;
+        const interval = 1000 / fps;
+        let lastTime = 0;
+
+        const loop = (time) => {
+            if (time - lastTime >= interval) {
+                this.update();
+                this.draw();
+                lastTime = time;
+            }
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
     }
 }
 
@@ -130,10 +141,12 @@ async function searchYouTube(query) {
         if (data.items && data.items.length > 0) {
             displayResults(data.items);
         } else {
-            // Instead of an alert, we can just clear the results or show a small message in the panel
             const list = document.getElementById('results-list');
             list.innerHTML = '<div style="padding: 20px; text-align: center; font-family: VT323, monospace; color: var(--text-secondary);">NO TAPES FOUND...</div>';
-            document.getElementById('results-panel').classList.remove('hidden');
+            const panel = document.getElementById('results-panel');
+            panel.classList.remove('hidden');
+            panel.classList.add('animate-in');
+            setTimeout(() => panel.classList.remove('animate-in'), 300);
         }
     } catch (e) { 
         console.error("Fetch Failed:", e); 
@@ -186,18 +199,20 @@ function displayResults(items) {
 
             // If moved enough, start dragging
             if (!touchGhost && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
-                e.preventDefault(); // Prevent scrolling once we start dragging
+                e.preventDefault();
                 touchGhost = div.cloneNode(true);
                 touchGhost.style.position = 'fixed';
                 touchGhost.style.width = div.offsetWidth + 'px';
                 touchGhost.style.height = div.offsetHeight + 'px';
-                touchGhost.style.left = (touch.clientX - div.offsetWidth / 2) + 'px';
-                touchGhost.style.top = (touch.clientY - div.offsetHeight / 2) + 'px';
+                touchGhost.style.left = '0';
+                touchGhost.style.top = '0';
                 touchGhost.style.zIndex = '1000';
                 touchGhost.style.pointerEvents = 'none';
-                touchGhost.style.opacity = '0.8';
-                touchGhost.style.transform = 'scale(0.8) rotate(-5deg)';
-                touchGhost.style.boxShadow = '0 10px 20px rgba(0,0,0,0.3)';
+                touchGhost.style.opacity = '0.9';
+                touchGhost.style.willChange = 'transform';
+                touchGhost.style.transform = `translate3d(${touch.clientX - div.offsetWidth / 2}px, ${touch.clientY - div.offsetHeight / 2}px, 0) scale(0.8) rotate(-5deg)`;
+                touchGhost.style.boxShadow = '0 15px 30px rgba(0,0,0,0.4)';
+                touchGhost.style.transition = 'transform 0.05s linear, opacity 0.2s';
                 document.body.appendChild(touchGhost);
                 
                 document.getElementById('results-panel').classList.add('hidden');
@@ -206,14 +221,18 @@ function displayResults(items) {
 
             if (touchGhost) {
                 e.preventDefault();
-                touchGhost.style.left = (touch.clientX - div.offsetWidth / 2) + 'px';
-                touchGhost.style.top = (touch.clientY - div.offsetHeight / 2) + 'px';
+                // Use translate3d for hardware acceleration
+                const x = touch.clientX - div.offsetWidth / 2;
+                const y = touch.clientY - div.offsetHeight / 2;
+                touchGhost.style.transform = `translate3d(${x}px, ${y}px, 0) scale(0.85) rotate(-3deg)`;
                 
-                // Visual feedback if over deck
                 const deckRect = deck.getBoundingClientRect();
                 if (touch.clientX >= deckRect.left && touch.clientX <= deckRect.right &&
                     touch.clientY >= deckRect.top && touch.clientY <= deckRect.bottom) {
-                    deck.classList.add('drag-over');
+                    if (!deck.classList.contains('drag-over')) {
+                        deck.classList.add('drag-over');
+                        if (window.navigator.vibrate) window.navigator.vibrate(10); // Subtle haptic if supported
+                    }
                 } else {
                     deck.classList.remove('drag-over');
                 }
@@ -240,7 +259,10 @@ function displayResults(items) {
 
         list.appendChild(div);
     });
-    document.getElementById('results-panel').classList.remove('hidden');
+    const panel = document.getElementById('results-panel');
+    panel.classList.remove('hidden');
+    panel.classList.add('animate-in');
+    setTimeout(() => panel.classList.remove('animate-in'), 300);
 }
 
 function loadTrack(item) {
@@ -335,7 +357,8 @@ function initPhysics() {
     ]);
 
     function spawnElement() {
-        if (Math.random() > 0.98) {
+        const threshold = /Android|iPhone|iPad/i.test(navigator.userAgent) ? 0.995 : 0.98;
+        if (Math.random() > threshold) {
             const x = Math.random() * window.innerWidth;
             const color = Math.random() > 0.5 ? '#8fa88f' : '#d69a9a';
             const shape = Bodies.circle(x, -50, 15, { render: { fillStyle: color, opacity: 0.3 } });
